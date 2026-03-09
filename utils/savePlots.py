@@ -12,5 +12,4 @@ def save(name: str, subpath: str):
 
     file = path / f"{name}.png"
     plt.savefig(file, dpi=150, bbox_inches="tight")
-    plt.close()
     print(f"  Saved {file}")
