@@ -8,11 +8,9 @@ warnings.filterwarnings('ignore')
 # CONSTANTS
 
 START_DATE = '1990-01-01'
-TRAIN_END  = '2018-12-31'   # Training:   up to end of 2018
-VAL_START  = '2019-01-01'   # Validation: 2019 – 2021
-VAL_END    = '2021-12-31'
-TEST_START = '2022-01-01'   # Test:       2022 – 2025
-TEST_END   = '2025-12-31'
+TRAIN_END = '2019-12-31'   # Training:   up to end of 2019
+TEST_START = '2020-01-01'   # Test:       2020 – 2025
+TEST_END = '2025-12-31'
 
 RETURN_COLS = [
     'SP500_Return',
@@ -182,10 +180,7 @@ def _validate_data(df: pd.DataFrame) -> None:
     print("=" * 60)
 
 
-
 # Main functions for public API
-
-
 def data_preprocess_pipeline(filepath: str, save_processed: bool = True):
     """
     Main preprocessing pipeline.
@@ -289,34 +284,38 @@ def add_lagged_variables(filepath: str, optimal_lags: dict):
     df.to_csv(filepath, index=False)
     print(f"\nUpdated file saved {filepath}")
     print("=" * 60)
-    return df
+    return df, new_lag_cols
 
 
-def data_split(df: pd.DataFrame,
-               feature_cols: list | None = None,
-               target_col: str = 'SP500_Return') -> dict:
+def data_split(df, feature_cols=None, target_col='SP500_Return'):
     """
-        split the dataset and return the dataframe
+    Split dataset into train and test sets using chronological order.
+
+    Returns
+    -------
+    dict with keys:
+        X_train, X_test       : np.ndarray  — Feature matrices
+        y_train, y_test       : np.ndarray  — Target arrays
+        dates_train,dates_test: pd.Series   — Corresponding dates
+        feature_cols          : list        — Feature names used
+
+    Example
+    -------
+    splits = data_split(df, MACRO_COLS)
+    X_train, y_train = splits['X_train'], splits['y_train']
+
     """
     if feature_cols is None:
         feature_cols = MACRO_COLS
 
-    print("\n" + "=" * 60)
-    print("SPLITTING DATA")
-    print(f"  Train      : {START_DATE}  {TRAIN_END}")
-    print(f"  Validation : {VAL_START}   {VAL_END}")
-    print(f"  Test       : {TEST_START}  {TEST_END}")
-    print("=" * 60)
-
     train_mask = df['Date'] <= TRAIN_END
-    val_mask   = (df['Date'] >= VAL_START) & (df['Date'] <= VAL_END)
-    test_mask  = (df['Date'] >= TEST_START) & (df['Date'] <= TEST_END)
+    test_mask = df['Date'] >= TEST_START
 
     splits = {}
-    for name, mask in [('train', train_mask), ('val', val_mask), ('test', test_mask)]:
+    for name, mask in [('train', train_mask), ('test', test_mask)]:
         subset = df.loc[mask]
-        splits[f'X_{name}']     = subset[feature_cols].values
-        splits[f'y_{name}']     = subset[target_col].values
+        splits[f'X_{name}'] = subset[feature_cols].values
+        splits[f'y_{name}'] = subset[target_col].values
         splits[f'dates_{name}'] = subset['Date'].reset_index(drop=True)
 
         y = splits[f'y_{name}']
