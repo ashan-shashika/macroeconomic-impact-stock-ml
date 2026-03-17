@@ -8,8 +8,8 @@ warnings.filterwarnings('ignore')
 # CONSTANTS
 
 START_DATE = '1990-01-01'
-TRAIN_END = '2019-12-31'   # Training:   up to end of 2019
-TEST_START = '2020-01-01'   # Test:       2020 – 2025
+TRAIN_END = '2018-12-31'   # Training:   up to end of 2019
+TEST_START = '2019-01-01'   # Test:       2020 – 2025
 TEST_END = '2025-12-31'
 
 RETURN_COLS = [
@@ -42,7 +42,8 @@ def _load_data(filepath: str):
     df['Date'] = pd.to_datetime(df['Date'])
     df = df.sort_values('Date').reset_index(drop=True)
     print(f"Loaded {len(df)} rows from {filepath}")
-    print(f"Date range: {df['Date'].min().date()} to {df['Date'].max().date()}")
+    print(
+        f"Date range: {df['Date'].min().date()} to {df['Date'].max().date()}")
     return df
 
 
@@ -101,14 +102,16 @@ def _process_macro_variables(df: pd.DataFrame):
 
     df['GDP_Growth'] = ((df['GDP'] / df['GDP'].shift(12)) - 1) * 100
     valid_gdp = df['GDP_Growth'].dropna()
-    print(f"  GDP_Growth (YoY %): mean={valid_gdp.mean():.2f}%  std={valid_gdp.std():.2f}%")
+    print(
+        f"  GDP_Growth (YoY %): mean={valid_gdp.mean():.2f}%  std={valid_gdp.std():.2f}%")
 
     if 'Credit_Spread' not in df.columns:
         df['Credit_Spread'] = df['BAA'] - df['AAA']
         print("  Credit_Spread: Calculated as BAA − AAA")
     else:
         valid_spread = df['Credit_Spread'].dropna()
-        print(f"  Credit_Spread: mean={valid_spread.mean():.3f}  std={valid_spread.std():.3f}")
+        print(
+            f"  Credit_Spread: mean={valid_spread.mean():.3f}  std={valid_spread.std():.3f}")
 
     print("=" * 60)
     return df
@@ -141,8 +144,10 @@ def _clean_and_select(df: pd.DataFrame, drop_initial_rows: int = 12):
     if dropped:
         print(f"Dropped {dropped} rows with missing key values")
 
-    print(f"\nFinal dataset: {len(df)} rows  ({initial_rows - len(df)} removed)")
-    print(f"Date range: {df['Date'].min().date()} to {df['Date'].max().date()}")
+    print(
+        f"\nFinal dataset: {len(df)} rows  ({initial_rows - len(df)} removed)")
+    print(
+        f"Date range: {df['Date'].min().date()} to {df['Date'].max().date()}")
     print("=" * 60)
     return df
 
@@ -167,7 +172,8 @@ def _validate_data(df: pd.DataFrame) -> None:
         if len(extremes):
             print(f"  {col}:")
             for _, row in extremes.iterrows():
-                print(f"    {row['Date'].strftime('%Y-%m-%d')}: {row[col]:.2f}%")
+                print(
+                    f"    {row['Date'].strftime('%Y-%m-%d')}: {row[col]:.2f}%")
         else:
             print(f"  {col}: none")
 
