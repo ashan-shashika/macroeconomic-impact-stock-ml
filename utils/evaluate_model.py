@@ -35,7 +35,6 @@ def evaluate_model(model, X_tr, y_tr, X_te, y_te, model_name):
     train_m = metrics(y_tr, train_pred)
     test_m = metrics(y_te, test_pred)
 
-    print(f"\n{'='*55}")
     print(f"  {model_name}")
     print(f"{'='*55}")
     print(f"  {'Metric':<25} {'Train':>10} {'Test':>10}")
