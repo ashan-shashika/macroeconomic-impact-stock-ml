@@ -8,8 +8,8 @@ warnings.filterwarnings('ignore')
 # CONSTANTS
 
 START_DATE = '1990-01-01'
-TRAIN_END = '2018-12-31'   # Training:   up to end of 2019
-TEST_START = '2019-01-01'   # Test:       2020 – 2025
+TRAIN_END = '2019-12-31'   # Training:   up to end of 2019
+TEST_START = '2020-01-01'   # Test:       2020 – 2025
 TEST_END = '2025-12-31'
 
 RETURN_COLS = [
@@ -324,13 +324,13 @@ def data_split(df, feature_cols=None, target_col='SP500_Return'):
         splits[f'y_{name}'] = subset[target_col].values
         splits[f'dates_{name}'] = subset['Date'].reset_index(drop=True)
 
-        y = splits[f'y_{name}']
-        d = splits[f'dates_{name}']
-        print(f"\n  {name.capitalize():10s}  n={len(y):4d}  "
-              f"{d.min().date()} to {d.max().date()}  "
-              f"μ={y.mean():.2f}%  σ={y.std():.2f}%")
+        # y = splits[f'y_{name}']
+        # d = splits[f'dates_{name}']
+        # print(f"\n  {name.capitalize():10s}  n={len(y):4d}  "
+        #       f"{d.min().date()} to {d.max().date()}  "
+        #       f"μ={y.mean():.2f}%  σ={y.std():.2f}%")
 
     splits['feature_cols'] = feature_cols
     print(f"\n  Features ({len(feature_cols)}): {', '.join(feature_cols)}")
-    print("=" * 60)
+    # print("=" * 60)
     return splits

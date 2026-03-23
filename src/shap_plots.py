@@ -50,8 +50,7 @@ def plot_shap_direction(shap_test_df):
     ax.set_yticklabels(mean_signed.index, fontsize=10)
     ax.axvline(0, color='black', linewidth=1.0, linestyle='--')
     ax.set_xlabel('Mean Signed SHAP Value (%)', fontsize=11)
-    ax.set_title('Feature Direction — Mean Signed SHAP on Test Set\n'
-                 'Red = pushes SP500 prediction UP  |  Blue = pushes DOWN',
+    ax.set_title('Feature Direction — Mean Signed SHAP on Test Set',
                  fontsize=11)
 
     for bar, val in zip(bars, mean_signed.values):
