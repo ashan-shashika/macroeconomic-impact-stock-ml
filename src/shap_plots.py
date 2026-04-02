@@ -1,9 +1,13 @@
+import shap
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
+import pandas as pd
+from utils.savePlots import save
+PLT_SAVE_DIR = "shap_plots"
 
 
-def plot_shap_importance(mean_abs_shap):
+def plot_shap_importance(mean_abs_shap, name="shap_importance"):
     """
     Horizontal bar chart of mean absolute SHAP values.
     Shows WHICH features matter most — averaged across all test observations.
@@ -27,10 +31,11 @@ def plot_shap_importance(mean_abs_shap):
 
     ax.grid(True, alpha=0.3, axis='x')
     plt.tight_layout()
+    save(f"{name}", PLT_SAVE_DIR)
     plt.show()
 
 
-def plot_shap_direction(shap_test_df):
+def plot_shap_direction(shap_test_df, name="shap_direction"):
     """
     Mean signed SHAP value per feature.
     Unlike mean |SHAP|, this shows NET direction:
@@ -69,4 +74,35 @@ def plot_shap_direction(shap_test_df):
     ax.legend(handles=legend_elements, loc='lower right', fontsize=9)
     ax.margins(x=0.15)
     plt.tight_layout()
+    save(f"{name}", PLT_SAVE_DIR)
     plt.show()
+
+
+def compute_shap(model, X_train, X_test, feature_cols, model_type="tree"):
+    """
+    Compute SHAP values for any model type.
+      - model_type="tree"   → TreeExplainer   (RF, XGBoost, LightGBM)
+      - model_type="linear" → LinearExplainer  (Ridge, Lasso, ElasticNet)
+
+    Returns: shap_test_df, mean_abs_shap
+    """
+
+    if model_type == "tree":
+        explainer = shap.TreeExplainer(model)
+    else:
+        explainer = shap.LinearExplainer(model, X_train)
+
+    shap_test = explainer.shap_values(X_test)
+
+    base_value = explainer.expected_value
+    if hasattr(base_value, '__len__'):
+        base_value = base_value[0]
+    print(f"  Base value (mean prediction) : {base_value:.4f}")
+
+    if not isinstance(X_test, pd.DataFrame):
+        X_test = pd.DataFrame(X_test, columns=feature_cols)
+
+    shap_test_df = pd.DataFrame(
+        shap_test, columns=feature_cols, index=X_test.index)
+    mean_abs_shap = shap_test_df.abs().mean().sort_values(ascending=False)
+    return shap_test_df, mean_abs_shap

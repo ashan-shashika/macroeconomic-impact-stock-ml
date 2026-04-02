@@ -1,4 +1,9 @@
-def r2_comparison_plot(eval_results):
+import matplotlib.pyplot as plt
+import numpy as np
+from utils.savePlots import save
+
+
+def r2_comparison_plot(eval_results, model_name="Ridge"):
     """
     Grouped bar chart comparing Train and Test R² across models.
 
@@ -10,9 +15,12 @@ def r2_comparison_plot(eval_results):
 
     Example
     -------
-    ev_base = evaluate_model(baseline_model, dtrain, y_train, dtest, y_test, "Baseline")
-    ev_opt  = evaluate_model(opt_model,      dtrain, y_train, dtest, y_test, "Optimised")
-    ev_tune = evaluate_model(tuned_model,    dtrain, y_train, dtest, y_test, "Tuned")
+    ev_base = evaluate_model(baseline_model, dtrain, y_train,
+                             dtest, y_test, "Baseline")
+    ev_opt = evaluate_model(opt_model, dtrain, y_train,
+                            dtest, y_test, "Optimised")
+    ev_tune = evaluate_model(tuned_model, dtrain, y_train,
+                             dtest, y_test, "Tuned")
 
     plot_r2_comparison({
         "Baseline":  ev_base,
@@ -20,8 +28,6 @@ def r2_comparison_plot(eval_results):
         "Tuned":     ev_tune,
     })
     """
-    import matplotlib.pyplot as plt
-    import numpy as np
 
     names = list(eval_results.keys())
     train_r2 = [v[0]['r2'] for v in eval_results.values()]
@@ -50,7 +56,7 @@ def r2_comparison_plot(eval_results):
     ax.set_xticks(x)
     ax.set_xticklabels(names, fontsize=12)
     ax.set_ylabel('R² Score', fontsize=12)
-    ax.set_title('Model Comparison — Train vs Test R²',
+    ax.set_title(f'{model_name} Models Comparison — Train vs Test R²',
                  fontsize=14, fontweight='bold')
     ax.legend(fontsize=9)
     ax.set_ylim(0, max(train_r2) + 0.15)
@@ -58,4 +64,5 @@ def r2_comparison_plot(eval_results):
     ax.axhline(y=0, color='black', linewidth=0.8)
 
     fig.tight_layout()
+    save(f"{model_name}", "r2_comparison_plots")
     plt.show()
