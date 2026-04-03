@@ -30,6 +30,7 @@ def plot_shap_importance(mean_abs_shap, name="shap_importance"):
                 f'{val:.3f}', va='center', fontsize=9)
 
     ax.grid(True, alpha=0.3, axis='x')
+    ax.margins(x=0.25)
     plt.tight_layout()
     save(f"{name}", PLT_SAVE_DIR)
     plt.show()
