@@ -10,6 +10,7 @@ def plot_learning_curve(evals_result, model_name="XGBoost"):
     to diagnose overfitting.
     """
 
+    PLT_SAVE_DIR = "model_XGBoost"
     train_rmse = evals_result['train']['rmse']
     test_rmse = evals_result['test']['rmse']
     rounds = np.arange(1, len(train_rmse) + 1)
@@ -58,6 +59,7 @@ def plot_learning_curve(evals_result, model_name="XGBoost"):
     ax.legend(loc='lower right')
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
+    save(f"{model_name}_learning_curve", PLT_SAVE_DIR)
     plt.show()
 
     print(
