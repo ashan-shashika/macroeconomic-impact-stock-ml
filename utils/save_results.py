@@ -19,7 +19,7 @@ sys.path.append(str(root_dir))
 model_dir = root_dir / "models"
 
 
-def save_evaluation(model_name, ev_result, feature_cols, y_test,):
+def save_evaluation(model_name, ev_result, feature_cols, y_test, path=None):
     """
     Save evaluate_model() output.
 
@@ -28,8 +28,13 @@ def save_evaluation(model_name, ev_result, feature_cols, y_test,):
     ev_result  : tuple     (train_metrics, test_metrics, train_pred, test_pred)
     feature_cols : list    feature column names
     """
+    p = Path(path) if path else model_dir
+    save_dir = p / "results"
 
-    save_dir = os.path.join(model_dir, "results")
+    print(
+        f"\n{'='*70}\n"
+        f"  Saving evaluation results for {save_dir}...\n"
+        f"{'='*70}")
     os.makedirs(save_dir, exist_ok=True)
 
     train_metrics, test_metrics, train_pred, test_pred = ev_result
@@ -55,6 +60,7 @@ def save_evaluation(model_name, ev_result, feature_cols, y_test,):
 
 def save_shap(
     model_name, shap_test_df, mean_abs_shap, feature_cols,
+    path=None
 ):
     """
     Save compute_shap() output.
@@ -65,7 +71,8 @@ def save_shap(
     mean_abs_shap : pd.Series      mean |SHAP| from compute_shap()
     feature_cols  : list
     """
-    save_dir = os.path.join(model_dir, "shap")
+    p = root_dir / path if path else model_dir
+    save_dir = p / "shap"
     os.makedirs(save_dir, exist_ok=True)
 
     data = {
@@ -83,7 +90,7 @@ def save_shap(
     print(f"    Features: {len(feature_cols)}")
 
 
-def save_model(model_name, model):
+def save_model(model_name, model, path=None):
     """
     Save the trained model object.
 
@@ -91,7 +98,8 @@ def save_model(model_name, model):
     model_name : str
     model      : trained model (sklearn, xgboost, keras, etc.)
     """
-    save_dir = os.path.join(model_dir, "trained")
+    p = root_dir / path if path else model_dir
+    save_dir = p / "trained"
     os.makedirs(save_dir, exist_ok=True)
 
     path = os.path.join(save_dir, f"{model_name}_model.pkl")
