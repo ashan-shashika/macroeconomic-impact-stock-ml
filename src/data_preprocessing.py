@@ -47,7 +47,9 @@ def _load_data(filepath: str):
     return df
 
 
-def _calculate_log_returns(df: pd.DataFrame, price_cols: list, suffix: str = '_Return'):
+def _calculate_log_returns(
+    df: pd.DataFrame, price_cols: list, suffix: str = '_Return'
+):
     df = df.copy()
     for col in price_cols:
         if col not in df.columns:
@@ -56,7 +58,7 @@ def _calculate_log_returns(df: pd.DataFrame, price_cols: list, suffix: str = '_R
         return_col = col.replace('_Close', '') + suffix
         df[return_col] = np.log(df[col] / df[col].shift(1)) * 100
         valid = df[return_col].dropna()
-        print(f"  {return_col}: mean={valid.mean():.2f}%  std={valid.std():.2f}%  "
+        print(f"{return_col}: mean={valid.mean():.2f}%  std={valid.std():.2f}%"
               f"min={valid.min():.2f}%  max={valid.max():.2f}%")
     return df
 
@@ -64,7 +66,8 @@ def _calculate_log_returns(df: pd.DataFrame, price_cols: list, suffix: str = '_R
 def _calculate_sector_returns(df: pd.DataFrame):
     price_cols = [
         'SP500_Close', 'SP500_IT_Close', 'SP500_Healthcare_Close',
-        'SP500_Financials_Close', 'SP500_Industrials_Close', 'SP500_Energy_Close',
+        'SP500_Financials_Close', 'SP500_Industrials_Close',
+        'SP500_Energy_Close',
     ]
     df = _calculate_log_returns(df, price_cols)
     rename_map = {
@@ -102,16 +105,17 @@ def _process_macro_variables(df: pd.DataFrame):
 
     df['GDP_Growth'] = ((df['GDP'] / df['GDP'].shift(12)) - 1) * 100
     valid_gdp = df['GDP_Growth'].dropna()
-    print(
-        f"  GDP_Growth (YoY %): mean={valid_gdp.mean():.2f}%  std={valid_gdp.std():.2f}%")
+    print(f"  GDP_Growth (YoY %): mean={valid_gdp.mean():.2f}%  "
+          f"std={valid_gdp.std():.2f}%")
 
     if 'Credit_Spread' not in df.columns:
         df['Credit_Spread'] = df['BAA'] - df['AAA']
-        print("  Credit_Spread: Calculated as BAA − AAA")
+        print("Credit_Spread: Calculated as BAA − AAA")
     else:
         valid_spread = df['Credit_Spread'].dropna()
         print(
-            f"  Credit_Spread: mean={valid_spread.mean():.3f}  std={valid_spread.std():.3f}")
+            f"Credit_Spread: mean={valid_spread.mean():.3f}  "
+            f"std={valid_spread.std():.3f}")
 
     print("=" * 60)
     return df

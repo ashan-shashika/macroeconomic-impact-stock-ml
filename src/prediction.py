@@ -22,8 +22,8 @@ def compare_predictions(results, y_test):
 
     _plot_actual_vs_predicted(results, y_test, model_names, colors)
     _plot_residual_violin(residuals, model_names, colors)
-    _plot_cumulative_error(residuals, model_names, colors)
-    _plot_error_percentiles(residuals, model_names, colors)
+    # _plot_cumulative_error(residuals, model_names, colors)
+    # _plot_error_percentiles(residuals, model_names, colors)
     _print_residual_stats(residuals, model_names)
 
 

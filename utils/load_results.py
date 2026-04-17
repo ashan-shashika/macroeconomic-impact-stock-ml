@@ -80,3 +80,38 @@ def get_y_test(results):
             return r["y_test"]
 
     raise ValueError("No y_test found matching test_pred size")
+
+
+def load_feature_importances(base_dir="models_sectors", model=None):
+    results = {}
+
+    model_dirs = (
+        [os.path.join(base_dir, model)]
+        if model
+        else [d for d in sorted(glob.glob(os.path.join(base_dir, "*")))
+              if os.path.isdir(d)]
+    )
+
+    for model_dir in model_dirs:
+        model_name = os.path.basename(model_dir)
+        fi_dir = os.path.join(model_dir, "feature_importance")
+
+        pattern = os.path.join(fi_dir, "*_feature_importance.pkl")
+        for path in sorted(glob.glob(pattern)):
+            with open(path, "rb") as f:
+                data = pickle.load(f)
+
+            # extract sector from filename if not stored in data
+            # energy_feature_importance.pkl → "energy"
+            sector = data.get("sector") or \
+                os.path.basename(path).replace("_feature_importance.pkl", "")
+
+            if model_name not in results:
+                results[model_name] = {}
+            results[model_name][sector] = data
+
+    print("Loaded feature importances:")
+    for m, sectors in results.items():
+        print(f"  {m:10s} → {list(sectors.keys())}")
+
+    return results

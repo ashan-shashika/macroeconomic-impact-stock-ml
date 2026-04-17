@@ -35,15 +35,15 @@ def check_multicollinearity(feature_matrix: pd.DataFrame,
     vif_data["VIF"] = [variance_inflation_factor(
         feature_matrix.values, i) for i in range(len(feature_matrix.columns))]
 
-    vif_data['Concern'] = vif_data['VIF'].apply(
-        lambda x: 'High' if x > threshold else 'OK'
-    )
+    # vif_data['Concern'] = vif_data['VIF'].apply(
+    #     lambda x: 'High' if x > threshold else 'OK'
+    # )
 
     vif_data = vif_data.sort_values('VIF', ascending=False)
     print("\nVariance Inflation Factor (VIF):")
-    print("=" * 50)
+
     print(vif_data.to_string(index=False))
-    print("=" * 50)
+
     print(f"\nNote: VIF > {threshold} indicates multicollinearity concern")
 
     return vif_data

@@ -6,8 +6,7 @@ The main deliverable: which macro features drive which sectors?
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-import seaborn as sns
+
 
 SECTOR_NAMES = {
     "tech":       "Technology",
@@ -25,6 +24,14 @@ FEATURE_LABELS = {
     "CPI_Change_lag1":    "Inflation",
     "Unemp_Change_lag1":  "Unemployment",
     "Credit_Spread_lag2": "Credit spreads",
+}
+
+SECTOR_COLOURS = {
+    "energy":     "#E07B39",
+    "finance":    "#4C72B0",
+    "healthcare": "#55A868",
+    "industrial": "#C44E52",
+    "tech":       "#8172B2",
 }
 
 
@@ -45,197 +52,157 @@ def build_sector_shap_matrix(shap_data):
     return matrix
 
 
-def plot_sector_heatmap(shap_data, ax=None):
-    standalone = ax is None
-
-    matrix = build_sector_shap_matrix(shap_data)
-
-    matrix.index = [FEATURE_LABELS.get(f, f) for f in matrix.index]
-    matrix.columns = [SECTOR_NAMES.get(s, s) for s in matrix.columns]
-
-    matrix = matrix = matrix.sort_index()
-
-    if standalone:
-        fig, ax = plt.subplots(figsize=(14, 6))
-
-    sns.heatmap(
-        matrix, annot=True, fmt=".1f", cmap="YlOrRd",
-        linewidths=0.5, linecolor="white", ax=ax,
-        annot_kws={"fontsize": 10, "fontweight": 500},
-        cbar_kws={"label": "% of total SHAP"}
-    )
-
-    ax.set_title("Which macro features drive which sectors?",
-                 fontsize=15, fontweight=500, pad=14)
-    ax.tick_params(axis="y", rotation=0)
-    ax.set_xlabel("")
-
-    if standalone:
-        plt.tight_layout()
-        plt.show()
-
-
-def plot_sector_feature_profiles(shap_data):
+def plot_feature_importance(all_results, model, sectors=None, top_n=None,
+                            save_path=None):
     """
-    Radar chart per sector showing its feature sensitivity profile.
-    Sectors with similar shapes react to the same macro forces.
+    Parameters
+    ----------
+    all_results : dict    output of load_feature_importances()
+    model       : str     e.g. "ridge" | "rf" | "xgboost"
+    sectors     : list    e.g. ["energy", "finance"]
+                          None → plot all sectors for that model
+    top_n       : int     show only top N features
     """
-    from math import pi
+    if model not in all_results:
+        raise ValueError(
+            f"Model '{model}' not found. "
+            f"Available: {list(all_results.keys())}")
 
-    matrix = build_sector_shap_matrix(shap_data)
-    features = list(matrix.index)
-    sectors = list(matrix.columns)
-    labels = [FEATURE_LABELS.get(f, f) for f in features]
+    # use all sectors for that model if none specified
+    sectors_to_plot = sectors if sectors else list(all_results[model].keys())
 
-    # group into 2 rows for readability
-    n = len(sectors)
-    cols = min(4, n)
-    rows = (n + cols - 1) // cols
+    # validate sectors
+    for sector in sectors_to_plot:
+        if sector not in all_results[model]:
+            raise ValueError(f"Sector '{sector}' not found under '{model}'. "
+                             f"Available: {list(all_results[model].keys())}")
 
-    fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 5 * rows),
-                             subplot_kw=dict(polar=True))
-    axes = axes.flatten() if hasattr(axes, 'flatten') else [axes]
+    n = len(sectors_to_plot)
+    ncols = min(n, 3)
+    nrows = (n + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(ncols * 5.5, nrows * 4.2),
+                             constrained_layout=True)
+    axes = np.array(axes).flatten()
 
-    angles = [i / len(features) * 2 * pi for i in range(len(features))]
-    angles += angles[:1]
+    for idx, sector in enumerate(sectors_to_plot):
+        ax = axes[idx]
+        data = all_results[model][sector]
 
-    for i, sector in enumerate(sectors):
-        ax = axes[i]
-        vals = matrix[sector].values.tolist()
-        vals += [vals[0]]
+        feature_names = [FEATURE_LABELS.get(f, f)
+                         for f in data["feature_cols"]]
+        importances = np.array(data["importances_pct"])
 
-        ax.plot(angles, vals, linewidth=2, color="#D85A30")
-        ax.fill(angles, vals, alpha=0.15, color="#D85A30")
+        pairs_sorted = sorted(
+            zip(importances, feature_names), key=lambda x: x[0])
+        if top_n:
+            pairs_sorted = pairs_sorted[-top_n:]
 
-        ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(labels, size=8)
-        ax.set_title(SECTOR_NAMES.get(sector, sector),
-                     fontsize=12, fontweight=500, pad=15)
+        imp_vals, feat_labels = zip(*pairs_sorted)
+        imp_vals = np.array(imp_vals)
+        colour = SECTOR_COLOURS.get(sector, "#888888")
 
-    # hide unused subplots
-    for j in range(len(sectors), len(axes)):
+        y_pos = np.arange(len(feat_labels))
+        bars = ax.barh(y_pos, imp_vals, color=colour, alpha=0.85,
+                       edgecolor="white", linewidth=0.6)
+
+        x_max = imp_vals.max()
+        for bar, val in zip(bars, imp_vals):
+            ax.text(val + x_max * 0.015, bar.get_y() + bar.get_height() / 2,
+                    f"{val:.2f}%", va="center", ha="left", fontsize=8)
+
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(feat_labels, fontsize=9)
+        ax.set_title(f"{sector.capitalize()}", fontsize=11,
+                     fontweight="bold", color=colour)
+        ax.set_xlabel("Importance (%)", fontsize=9)
+        ax.set_xlim(0, x_max * 1.25)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(axis="x", linestyle="--", alpha=0.35)
+
+    for j in range(n, len(axes)):
         axes[j].set_visible(False)
 
-    plt.suptitle("Sector sensitivity profiles",
-                 fontsize=15, fontweight=500, y=1.02)
-    plt.tight_layout()
-    plt.show()
+    fig.suptitle(f"{model.upper()} — Feature Importance",
+                 fontsize=13, fontweight="bold")
+
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+
+    return fig
 
 
-def plot_feature_across_sectors(shap_data, feature="VIX_Change"):
+def plot_shap_importance(shap_data, sectors=None, top_n=None, save_path=None):
     """
-    Bar chart: how important is ONE feature across all sectors?
-    e.g. "Which sectors are most sensitive to VIX?"
-    """
-    matrix = build_sector_shap_matrix(shap_data)
-    # sectors = list(matrix.columns)
-    vals = matrix.loc[feature]
-
-    # sort by importance
-    sorted_idx = vals.sort_values(ascending=True).index
-    sorted_vals = vals[sorted_idx]
-    sorted_names = [SECTOR_NAMES.get(s, s) for s in sorted_idx]
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    cmap = mpl.colormaps["YlOrRd"]
-    colors = cmap(sorted_vals / sorted_vals.max())
-    ax.barh(range(len(sorted_vals)), sorted_vals, color=colors, height=0.6)
-
-    for i, val in enumerate(sorted_vals):
-        ax.text(val + 0.5, i, f"{val:.1f}%", va="center",
-                fontsize=10, fontweight=500)
-
-    ax.set_yticks(range(len(sorted_names)))
-    ax.set_yticklabels(sorted_names, fontsize=11)
-    ax.set_xlabel("SHAP importance (%)")
-
-    plain = FEATURE_LABELS.get(feature, feature)
-    ax.set_title(f"Which sectors are most sensitive to {plain}?",
-                 fontsize=14, fontweight=500)
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_sector_clustering(shap_data):
-    """
-    Clustermap: group sectors by similar feature sensitivity.
-    Sectors that cluster together react to the same macro forces.
+    Parameters
+    ----------
+    shap_data : dict    output of load_shap_data()
+    sectors   : list    e.g. ["energy", "finance"]
+                        None → plot all sectors
+    top_n     : int     show only top N features per sector
+    save_path : str     optional path to save the figure
     """
     matrix = build_sector_shap_matrix(shap_data)
+
+    if sectors is not None:
+        available = [s for s in sectors if s in matrix.columns]
+        matrix = matrix[available]
+
+    # Apply display labels
     matrix.index = [FEATURE_LABELS.get(f, f) for f in matrix.index]
     matrix.columns = [SECTOR_NAMES.get(s, s) for s in matrix.columns]
 
-    g = sns.clustermap(matrix, annot=True, fmt=".1f", cmap="YlOrRd",
-                       linewidths=0.5, figsize=(14, 7),
-                       annot_kws={"fontsize": 9, "fontweight": 500},
-                       cbar_kws={"label": "% of total SHAP"})
-    g.fig.suptitle("Sector clustering by macro sensitivity",
-                   fontsize=15, fontweight=500, y=1.02)
-    plt.tight_layout()
-    plt.show()
+    sectors_to_plot = list(matrix.columns)
+    n = len(sectors_to_plot)
+    ncols = min(n, 3)
+    nrows = (n + ncols - 1) // ncols
 
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(ncols * 5.5, nrows * 4.2),
+                             constrained_layout=True)
+    axes = np.array(axes).flatten()
 
-def plot_directional_impact_by_sector(shap_data):
-    """
-    For each sector: does VIX/GDP/etc push it UP or DOWN?
-    The economic story per sector.
-    """
-    # UP = "#1D9E75"
-    # DOWN = "#E24B4A"
+    for idx, sector_col in enumerate(sectors_to_plot):
+        ax = axes[idx]
 
-    sectors = list(shap_data.keys())
-    features = shap_data[sectors[0]]["feature_cols"]
-    labels = [FEATURE_LABELS.get(f, f) for f in features]
+        # Sort ascending so highest bar ends up at top after barh
+        vals = matrix[sector_col].sort_values(ascending=True)
+        if top_n:
+            vals = vals.tail(top_n)
 
-    # build direction matrix
-    direction = pd.DataFrame(index=features, columns=sectors)
-    for sector in sectors:
-        shap_df = shap_data[sector]["shap_test_df"]
-        for feat in features:
-            direction.loc[feat, sector] = np.mean(shap_df[feat].values)
+        feat_labels = vals.index.tolist()
+        imp_vals = vals.values
+        y_pos = np.arange(len(feat_labels))
 
-    direction = direction.astype(float)
-    direction.index = labels
-    direction.columns = [SECTOR_NAMES.get(s, s) for s in sectors]
+        # Look up colour by original sector key (before SECTOR_NAMES mapping)
+        original_key = next(
+            (k for k, v in SECTOR_NAMES.items() if v == sector_col), sector_col
+        )
+        colour = SECTOR_COLOURS.get(original_key, "#888888")
 
-    fig, ax = plt.subplots(figsize=(14, 6))
-    sns.heatmap(direction, annot=True, fmt="+.3f", center=0,
-                cmap="RdYlGn", linewidths=0.5, linecolor="white", ax=ax,
-                annot_kws={"fontsize": 9, "fontweight": 500},
-                cbar_kws={"label": "Green = pushes sector UP"})
+        bars = ax.barh(y_pos, imp_vals, color=colour, alpha=0.85,
+                       edgecolor="white", linewidth=0.6)
 
-    ax.set_title("When this macro factor rises → sector goes...",
-                 fontsize=14, fontweight=500, pad=14)
-    ax.tick_params(axis="y", rotation=0)
-    plt.tight_layout()
-    plt.show()
+        x_max = imp_vals.max()
+        for bar, val in zip(bars, imp_vals):
+            ax.text(val + x_max * 0.015, bar.get_y() + bar.get_height() / 2,
+                    f"{val:.1f}%", va="center", ha="left", fontsize=8)
 
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(feat_labels, fontsize=9)
+        ax.set_title(sector_col, fontsize=11, fontweight="bold", color=colour)
+        ax.set_xlabel("% of total SHAP", fontsize=9)
+        ax.set_xlim(0, x_max * 1.25)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(axis="x", linestyle="--", alpha=0.35)
 
-def print_sector_summary(shap_data):
-    """Print the key story: top driver per sector."""
+    for j in range(n, len(axes)):
+        axes[j].set_visible(False)
 
-    sectors = list(shap_data.keys())
-    # features = shap_data[sectors[0]]["feature_cols"]
-    matrix = build_sector_shap_matrix(shap_data)
+    fig.suptitle("SHAP — Feature Importance by Sector",
+                 fontsize=13, fontweight="bold")
 
-    print(f"\n{'='*70}")
-    print("  TOP MACRO DRIVER PER SECTOR")
-    print(f"{'='*70}")
-    print(
-        f"\n  {'Sector':<20} {'Top feature':<25} "
-        f"{'Importance':>12} {'2nd feature':<25}")
-    print(f"  {'-'*65}")
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
 
-    for sector in sectors:
-        vals = matrix[sector].sort_values(ascending=False)
-        top1 = vals.index[0]
-        top2 = vals.index[1]
-        name = SECTOR_NAMES.get(sector, sector)
-        plain1 = FEATURE_LABELS.get(top1, top1)
-        plain2 = FEATURE_LABELS.get(top2, top2)
-
-        print(
-            f"  {name:<20} {plain1:<25} {vals.iloc[0]:>10.1f}%  {plain2:<25}")
-
-    print(f"{'='*70}")
+    return fig
