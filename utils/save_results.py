@@ -31,10 +31,6 @@ def save_evaluation(model_name, ev_result, feature_cols, y_test, path=None):
     p = Path(path) if path else model_dir
     save_dir = p / "results"
 
-    print(
-        f"\n{'='*70}\n"
-        f"  Saving evaluation results for {save_dir}...\n"
-        f"{'='*70}")
     os.makedirs(save_dir, exist_ok=True)
 
     train_metrics, test_metrics, train_pred, test_pred = ev_result
